@@ -1,8 +1,115 @@
 package EjerConcesionaria;
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        String nombreConcesionaria = "";
+        try (Scanner entrada = new Scanner(new File("nombreConcesionaria.txt"))) {
+            nombreConcesionaria = entrada.nextLine();
+        } catch (FileNotFoundException e) {
+            System.out.println("Error al leer el nombre de la concesionaria desde el archivo." + e.getMessage());
+        }
+        Concesionaria concesionaria = new Concesionaria(nombreConcesionaria);
+
+        concesionaria.agregarVehiculo((new Coche("Fiat", "Tornado", 20000) {
+            @Override
+            public double calcularImpuesto() {
+                return 0;
+            }
+
+            @Override
+            public void mostrarInformacion() {
+
+            }
+        }));
+
+        while (true) {
+            System.out.println("Seleccione una opción:");
+            System.out.println("1. Agregar vehículo");
+            System.out.println("2. Eliminar vehículo");
+            System.out.println("3. Editar precio de vehículo");
+            System.out.println("4. Mostrar inventario");
+            System.out.println("5. Guardar concesionaria");
+            System.out.println("6. Cargar concesionaria");
+            System.out.println("7. Salir");
+
+            int opcion = scanner.nextInt();
+            scanner.nextLine();  // Consumir la nueva línea después del número
+
+            switch (opcion) {
+                case 1:
+                    System.out.print("Tipo de vehículo (Coche/Moto): ");
+                    String tipoVehiculo = scanner.nextLine();
+                    System.out.print("Marca: ");
+                    String marca = scanner.nextLine();
+                    System.out.print("Modelo: ");
+                    String modelo = scanner.nextLine();
+                    System.out.print("Precio: ");
+                    double precio = scanner.nextDouble();
+                    scanner.nextLine();  // Consumir la nueva línea después del precio
+
+                    if ("Coche".equalsIgnoreCase(tipoVehiculo)) {
+                        concesionaria.agregarVehiculo(new Coche(marca, modelo, precio));
+                    } else if ("Moto".equalsIgnoreCase(tipoVehiculo)) {
+                        concesionaria.agregarVehiculo(new Moto(marca, modelo, precio));
+                    } else {
+                        System.out.println("Tipo de vehículo no válido.");
+                    }
+                    break;
+                case 2:
+                    System.out.print("Marca del vehículo a eliminar: ");
+                    String marcaEliminar = scanner.nextLine();
+                    System.out.print("Modelo del vehículo a eliminar: ");
+                    String modeloEliminar = scanner.nextLine();
+                    concesionaria.eliminarVehiculo(marcaEliminar, modeloEliminar);
+                    break;
+                case 3:
+                    System.out.print("Marca del vehículo a editar: ");
+                    String marcaEditar = scanner.nextLine();
+                    System.out.print("Modelo del vehículo a editar: ");
+                    String modeloEditar = scanner.nextLine();
+                    System.out.print("Nuevo precio: ");
+                    double nuevoPrecio = scanner.nextDouble();
+                    scanner.nextLine();  // Consumir la nueva línea después del precio
+                    concesionaria.editarPrecio(marcaEditar, modeloEditar, nuevoPrecio);
+                    break;
+                case 4:
+                    concesionaria.mostrarInventario();
+                    break;
+                case 5:
+                    try {
+                        concesionaria.guardar("concesionaria.dat");
+                    } catch (IOException e) {
+                        System.out.println("Error al guardar la concesionaria: " + e.getMessage());
+                    }
+                    break;
+                case 6:
+                    try {
+                        concesionaria = concesionaria.cargar("concesionaria.dat");
+                        System.out.println("Concesionaria cargada con éxito.");
+                    } catch (IOException | ClassNotFoundException e) {
+                        System.out.println("Error al cargar concesionaria desde el archivo: " + e.getMessage());
+                    }
+                    break;
+
+                case 7:
+                    System.out.println("¡Hasta luego!");
+                    scanner.close();
+                    System.exit(0);
+                    break;
+                default:
+                    System.out.println("Opción no válida.");
+            }
+        }
+    }
+}
 
 // Definición de la clase abstracta Vehiculo
 abstract class Vehiculo {
@@ -129,14 +236,12 @@ class Concesionaria implements Serializable {
     }
 
     public void mostrarInventario() {
-        if (inventario.isEmpty()) {
-            System.out.println("La concesionaria está vacía.");
-        } else {
-            System.out.println("Inventario de la Concesionaria:");
-            for (Vehiculo vehiculo : inventario) {
-                vehiculo.mostrarInformacion();
-                System.out.println();
-            }
+        System.out.println("Nombre de la Concecionaria: " + nombreConcesionaria + "\n");
+        System.out.println("Inventario de la concecionaria:");
+
+        for (Vehiculo vehiculo : inventario){
+            vehiculo.mostrarInformacion();
+            System.out.println();
         }
     }
 
@@ -147,6 +252,8 @@ class Concesionaria implements Serializable {
         try (ObjectOutputStream salida = new ObjectOutputStream(new FileOutputStream(nombreArchivo))) {
             salida.writeObject(this);
             System.out.println("Concesionaria guardada en " + nombreArchivo);
+        }catch (IOException e){
+            System.out.println("Error al guardar la concesionaria: " + e.getMessage());
         }
     }
 
@@ -157,112 +264,12 @@ class Concesionaria implements Serializable {
             this.inventario = concesionariaCargada.inventario;
             System.out.println("Concesionaria cargada desde " + nombreArchivo);
             return this; // Devuelve la instancia actual de la concesionaria
+        }catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error al cargar la concecionaria desde el archivo. " + e.getMessage());
+            return null;
         }
     }
 
 }
 
-public class Main {
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
 
-        String nombreConcesionaria = "";
-        try (Scanner entrada = new Scanner(new File("nombreConcesionaria.txt"))) {
-            nombreConcesionaria = entrada.nextLine();
-        } catch (FileNotFoundException e) {
-            System.out.println("Error al leer el nombre de la concesionaria desde el archivo." + e.getMessage());
-        }
-        Concesionaria concesionaria = new Concesionaria(nombreConcesionaria);
-
-        concesionaria.agregarVehiculo((new Vehiculo("Fiat", "Tornado", 20000) {
-            @Override
-            public double calcularImpuesto() {
-                return 0;
-            }
-
-            @Override
-            public void mostrarInformacion() {
-
-            }
-        }));
-
-        while (true) {
-            System.out.println("Seleccione una opción:");
-            System.out.println("1. Agregar vehículo");
-            System.out.println("2. Eliminar vehículo");
-            System.out.println("3. Editar precio de vehículo");
-            System.out.println("4. Mostrar inventario");
-            System.out.println("5. Guardar concesionaria");
-            System.out.println("6. Cargar concesionaria");
-            System.out.println("7. Salir");
-
-            int opcion = scanner.nextInt();
-            scanner.nextLine();  // Consumir la nueva línea después del número
-
-            switch (opcion) {
-                case 1:
-                    System.out.print("Tipo de vehículo (Coche/Moto): ");
-                    String tipoVehiculo = scanner.nextLine();
-                    System.out.print("Marca: ");
-                    String marca = scanner.nextLine();
-                    System.out.print("Modelo: ");
-                    String modelo = scanner.nextLine();
-                    System.out.print("Precio: ");
-                    double precio = scanner.nextDouble();
-                    scanner.nextLine();  // Consumir la nueva línea después del precio
-
-                    if ("Coche".equalsIgnoreCase(tipoVehiculo)) {
-                        concesionaria.agregarVehiculo(new Coche(marca, modelo, precio));
-                    } else if ("Moto".equalsIgnoreCase(tipoVehiculo)) {
-                        concesionaria.agregarVehiculo(new Moto(marca, modelo, precio));
-                    } else {
-                        System.out.println("Tipo de vehículo no válido.");
-                    }
-                    break;
-                case 2:
-                    System.out.print("Marca del vehículo a eliminar: ");
-                    String marcaEliminar = scanner.nextLine();
-                    System.out.print("Modelo del vehículo a eliminar: ");
-                    String modeloEliminar = scanner.nextLine();
-                    concesionaria.eliminarVehiculo(marcaEliminar, modeloEliminar);
-                    break;
-                case 3:
-                    System.out.print("Marca del vehículo a editar: ");
-                    String marcaEditar = scanner.nextLine();
-                    System.out.print("Modelo del vehículo a editar: ");
-                    String modeloEditar = scanner.nextLine();
-                    System.out.print("Nuevo precio: ");
-                    double nuevoPrecio = scanner.nextDouble();
-                    scanner.nextLine();  // Consumir la nueva línea después del precio
-                    concesionaria.editarPrecio(marcaEditar, modeloEditar, nuevoPrecio);
-                    break;
-                case 4:
-                    concesionaria.mostrarInventario();
-                    break;
-                case 5:
-                    try {
-                        concesionaria.guardar("concesionaria.dat");
-                    } catch (IOException e) {
-                        System.out.println("Error al guardar la concesionaria: " + e.getMessage());
-                    }
-                    break;
-                case 6:
-                    try {
-                        concesionaria = concesionaria.cargar("concesionaria.dat");
-                        System.out.println("Concesionaria cargada con éxito.");
-                    } catch (IOException | ClassNotFoundException e) {
-                        System.out.println("Error al cargar concesionaria desde el archivo: " + e.getMessage());
-                    }
-                    break;
-
-                case 7:
-                    System.out.println("¡Hasta luego!");
-                    scanner.close();
-                    System.exit(0);
-                    break;
-                default:
-                    System.out.println("Opción no válida.");
-            }
-        }
-    }
-}
